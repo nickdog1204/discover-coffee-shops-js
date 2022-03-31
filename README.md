@@ -1,3 +1,9 @@
+# For the course "[ZTM NextJs](https://www.udemy.com/course/complete-nextjs-developer-zero-to-mastery/)"
+
+---
+
+---
+
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
 ## Getting Started

@@ -3,11 +3,10 @@ import Image from 'next/image'
 import styles from '../styles/Home.module.css'
 import Banner from "../components/Banner";
 import Card from "../components/Card";
-import coffeeStoresData from '../data/coffee-stores.json';
-import axios from "axios"
 import {fetchCoffeeStoresAsync, fetchCoffeeStoresByLatLngAsync} from "../lib/coffee-stores";
 import useTrackLocation from "../hooks/use-track-location";
-import {useEffect, useState} from "react";
+import {useContext, useEffect, useState} from "react";
+import {StoreContext} from "../store/store-context";
 
 export const getStaticProps = async (context) => {
     return {
@@ -20,17 +19,16 @@ export const getStaticProps = async (context) => {
 export default function Home(props) {
     const {
         handleTrackLocation,
-        latLng,
         locationErrorMsg,
         isFinding
     } = useTrackLocation();
-    const [coffeeStores, setCoffeeStores] = useState([]);
+    const {state: {latLng, coffeeStores}, dispatchSetCoffeeStores} = useContext(StoreContext);
     const [coffeeError, setCoffeeError] = useState(null);
     useEffect(() => {
         const fetchIt = async () => {
             try {
                 const res = await fetchCoffeeStoresByLatLngAsync(latLng, null, 30);
-                setCoffeeStores(res);
+                dispatchSetCoffeeStores(res);
             } catch (e) {
                 setCoffeeError(e.message);
             }

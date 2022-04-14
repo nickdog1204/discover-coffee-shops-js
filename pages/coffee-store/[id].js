@@ -5,6 +5,8 @@ import Head from "next/head";
 import classes from "../../styles/coffee-store.module.css";
 import classNames from "classnames";
 import {fetchCoffeeStoresAsync} from "../../lib/coffee-stores";
+import {useContext, useEffect, useState} from "react";
+import {StoreContext} from "../../store/store-context";
 
 export async function getStaticProps({params}) {
     const coffeeStoresData = await fetchCoffeeStoresAsync('new york', 'coffee', '6');
@@ -17,7 +19,6 @@ export async function getStaticProps({params}) {
 }
 
 export async function getStaticPaths() {
-    console.log('11111111111111122')
     const coffeeStoresData = await fetchCoffeeStoresAsync('new york', 'coffee', '6');
     const paths = coffeeStoresData
         // .slice(0, -1)
@@ -28,17 +29,27 @@ export async function getStaticPaths() {
     }
 }
 
-export const CoffeeStore = (props) => {
+export const CoffeeStore = (initialProps) => {
     const router = useRouter();
+    console.log('initialProps.coffeeStore', initialProps.coffeeStore);
+    const [coffeeStore, setCoffeeStore] = useState(initialProps.coffeeStore);
+    const {state: {coffeeStores}} = useContext(StoreContext);
+    const idStr = router.query.id;
+    useEffect(() => {
+        if (!coffeeStore.fsq_id) {
+            setCoffeeStore(coffeeStores.find(it => it.fsq_id === idStr));
+        }
+    }, [idStr]);
     if (router.isFallback) {
+        console.log('fallback');
         return <div>Loading...</div>
     }
-    const {location, name, imgUrl} = props.coffeeStore;
+
+    const {location, name, imgUrl} = coffeeStore;
     // console.log('CoffeeStore props:', props);
 
     const upvoteBtnHandler = () => {
         console.log('handle upvote')
-
     }
 
     return (

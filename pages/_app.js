@@ -1,20 +1,5 @@
 import '../styles/globals.css'
-import {createContext} from "react";
-
-const StoreContext = createContext();
-
-
-const StoreProvider = ({children}) => {
-    const initialState = {
-        latLng: '',
-        coffeeStores: []
-    };
-    return (
-        <StoreContext.Provider value={{state: initialState}}>
-            {children}
-        </StoreContext.Provider>
-    )
-}
+import StoreProvider from "../store/store-context";
 
 function MyApp({Component, pageProps}) {
     return (

@@ -7,10 +7,12 @@ import classNames from "classnames";
 import {fetchCoffeeStoresAsync} from "../../lib/coffee-stores";
 import {useContext, useEffect, useState} from "react";
 import {StoreContext} from "../../store/store-context";
+import axios from "axios";
 
 export async function getStaticProps({params}) {
     const coffeeStoresData = await fetchCoffeeStoresAsync('new york', 'coffee', '6');
     const coffeeStoreById = (coffeeStoresData.find(it => it.fsq_id.toString() === params.id))
+    console.log({coffeeStoreById})
     return {
         props: {
             coffeeStore: coffeeStoreById || {location: {}}
@@ -35,17 +37,46 @@ export const CoffeeStore = (initialProps) => {
     const [coffeeStore, setCoffeeStore] = useState(initialProps.coffeeStore);
     const {state: {coffeeStores}} = useContext(StoreContext);
     const idStr = router.query.id;
+    const handleCreateCoffeeStoreAsync = async (coffeeStore) => {
+        const {
+            fsq_id,
+            name,
+            location: {
+                address, neighborhood: neighbourhood
+            },
+            imgUrl
+        } = coffeeStore;
+        const myNeighbourhood = neighbourhood && neighbourhood.length > 0 ? neighbourhood[0] : neighbourhood ? neighbourhood : '<<沒有沒有>>';
+        const {data} = await axios.post('/api/createCoffeeStore', {
+            id: `${fsq_id}`,
+            name,
+            address: address || '<沒有地址資訊>',
+            neighbourhood: myNeighbourhood,
+            voting: 0,
+            imgUrl
+        })
+    }
     useEffect(() => {
-        if (!coffeeStore.fsq_id) {
-            setCoffeeStore(coffeeStores.find(it => it.fsq_id === idStr));
+        if (!coffeeStore?.fsq_id) {
+            const coffeeStoreFromContext = coffeeStores.find(it => it.fsq_id === idStr)
+            if (coffeeStoreFromContext) {
+                setCoffeeStore(coffeeStoreFromContext);
+                handleCreateCoffeeStoreAsync(coffeeStoreFromContext)
+            }
+        } else {
+            console.log({'initialProps.coffeeStore111': initialProps.coffeeStore});
+            handleCreateCoffeeStoreAsync(initialProps.coffeeStore)
         }
-    }, [idStr]);
+    }, [idStr, initialProps, initialProps.coffeeStore]);
+
     if (router.isFallback) {
         console.log('fallback');
         return <div>Loading...</div>
     }
-
+    if (coffeeStore) {
+    }
     const {location, name, imgUrl} = coffeeStore;
+
     // console.log('CoffeeStore props:', props);
 
     const upvoteBtnHandler = () => {

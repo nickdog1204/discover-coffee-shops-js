@@ -7,6 +7,7 @@ import {fetchCoffeeStoresAsync, fetchCoffeeStoresByLatLngAsync} from "../lib/cof
 import useTrackLocation from "../hooks/use-track-location";
 import {useContext, useEffect, useState} from "react";
 import {StoreContext} from "../store/store-context";
+import axios from "axios";
 
 export const getStaticProps = async (context) => {
     return {
@@ -27,8 +28,8 @@ export default function Home(props) {
     useEffect(() => {
         const fetchIt = async () => {
             try {
-                const res = await fetchCoffeeStoresByLatLngAsync(latLng, null, 30);
-                dispatchSetCoffeeStores(res);
+                const {data: {stores}} = await axios.get(`/api/getCoffeeStoresByLatLng?latLng=${latLng}&limit=30`)
+                dispatchSetCoffeeStores(stores);
             } catch (e) {
                 setCoffeeError(e.message);
             }

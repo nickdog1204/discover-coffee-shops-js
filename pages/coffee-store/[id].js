@@ -8,14 +8,15 @@ import {fetchCoffeeStoresAsync} from "../../lib/coffee-stores";
 import {useContext, useEffect, useState} from "react";
 import {StoreContext} from "../../store/store-context";
 import axios from "axios";
+import {isEmpty} from "../../lib/utils";
+import useSWR from 'swr';
 
 export async function getStaticProps({params}) {
     const coffeeStoresData = await fetchCoffeeStoresAsync('new york', 'coffee', '6');
-    const coffeeStoreById = (coffeeStoresData.find(it => it.fsq_id.toString() === params.id))
-    console.log({coffeeStoreById})
+    const coffeeStoreById = (coffeeStoresData.find(it => it.id.toString() === params.id))
     return {
         props: {
-            coffeeStore: coffeeStoreById || {location: {}}
+            coffeeStore: coffeeStoreById || {}
         }
     }
 }
@@ -24,7 +25,7 @@ export async function getStaticPaths() {
     const coffeeStoresData = await fetchCoffeeStoresAsync('new york', 'coffee', '6');
     const paths = coffeeStoresData
         // .slice(0, -1)
-        .map(coffeeStore => ({params: {id: coffeeStore.fsq_id.toString()}}))
+        .map(coffeeStore => ({params: {id: coffeeStore.id.toString()}}))
     return {
         paths,
         fallback: true
@@ -33,54 +34,75 @@ export async function getStaticPaths() {
 
 export const CoffeeStore = (initialProps) => {
     const router = useRouter();
-    console.log('initialProps.coffeeStore', initialProps.coffeeStore);
     const [coffeeStore, setCoffeeStore] = useState(initialProps.coffeeStore);
     const {state: {coffeeStores}} = useContext(StoreContext);
+    const [votingCount, setVotingCount] = useState(1);
     const idStr = router.query.id;
+    const {data, error} = useSWR(`/api/getCoffeeStoreById?id=${idStr}`, (url) => axios(url).then(it => it.data));
+    useEffect(() => {
+        if (data && data.length > 0) {
+            setCoffeeStore(data[0]);
+            setVotingCount(data[0].voting);
+        }
+    }, [data])
     const handleCreateCoffeeStoreAsync = async (coffeeStore) => {
-        const {
-            fsq_id,
-            name,
-            location: {
-                address, neighborhood: neighbourhood
-            },
-            imgUrl
-        } = coffeeStore;
-        const myNeighbourhood = neighbourhood && neighbourhood.length > 0 ? neighbourhood[0] : neighbourhood ? neighbourhood : '<<沒有沒有>>';
-        const {data} = await axios.post('/api/createCoffeeStore', {
-            id: `${fsq_id}`,
-            name,
-            address: address || '<沒有地址資訊>',
-            neighbourhood: myNeighbourhood,
-            voting: 0,
-            imgUrl
-        })
+        try {
+            const {data} = await axios.post('/api/createCoffeeStore', {
+                ...coffeeStore,
+                voting: 0
+            });
+            return data;
+        } catch (e) {
+            console.error('Error creating coffee store', e)
+        }
     }
     useEffect(() => {
-        if (!coffeeStore?.fsq_id) {
-            const coffeeStoreFromContext = coffeeStores.find(it => it.fsq_id === idStr)
-            if (coffeeStoreFromContext) {
-                setCoffeeStore(coffeeStoreFromContext);
-                handleCreateCoffeeStoreAsync(coffeeStoreFromContext)
+        if (isEmpty(initialProps.coffeeStore)) {
+            if (coffeeStores.length > 0) {
+                const coffeeStoreFromContext = coffeeStores.find(it => it.id === idStr)
+                if (coffeeStoreFromContext) {
+                    setCoffeeStore(coffeeStoreFromContext);
+                    handleCreateCoffeeStoreAsync(coffeeStoreFromContext)
+                        // .then(res => console.log({res}))
+                }
+            } else {
+                // handleCreateCoffeeStoreAsync({id: idStr})
+                //     .then(({type, data}) => {
+                //         console.log({type})
+                //         setCoffeeStore(data);
+                //     })
             }
         } else {
-            console.log({'initialProps.coffeeStore111': initialProps.coffeeStore});
             handleCreateCoffeeStoreAsync(initialProps.coffeeStore)
+                // .then(res => console.log({res}))
         }
     }, [idStr, initialProps, initialProps.coffeeStore]);
+    if (error) {
+        return (
+            <div>取得咖啡廳資料時出錯了</div>
+        )
+    }
+
 
     if (router.isFallback) {
-        console.log('fallback');
+        // console.log('fallback');
         return <div>Loading...</div>
     }
     if (coffeeStore) {
     }
-    const {location, name, imgUrl} = coffeeStore;
+    // console.log({'myCOFFFEEStore': coffeeStore});
+    const {address, neighborhood, name, imgUrl} = coffeeStore || {};
 
     // console.log('CoffeeStore props:', props);
 
-    const upvoteBtnHandler = () => {
-        console.log('handle upvote')
+
+    const upvoteBtnHandler = async () => {
+        const {data} = await axios.put(`/api/favoriteCoffeeStoreById`, {
+            id: idStr
+        });
+        if (0 !== data.length) {
+            setVotingCount(data[0].voting);
+        }
     }
 
     return (
@@ -103,15 +125,15 @@ export const CoffeeStore = (initialProps) => {
                 <div className={classNames('glass', classes.col2)}>
                     <div className={classes.iconWrapper}>
                         <Image src="/static/icons/places.svg" width="24" height="24"/>
-                        <p className={classes.text}>{location.formatted_address}</p>
+                        <p className={classes.text}>{address}</p>
                     </div>
-                    {location.neighborhood && <div className={classes.iconWrapper}>
+                    <div className={classes.iconWrapper}>
                         <Image src="/static/icons/nearMe.svg" width="24" height="24"/>
-                        <p className={classes.text}>{location.neighborhood[0]}</p>
-                    </div>}
+                        <p className={classes.text}>{neighborhood}</p>
+                    </div>
                     <div className={classes.iconWrapper}>
                         <Image src="/static/icons/star.svg" width="24" height="24"/>
-                        <p className={classes.text}>1</p>
+                        <p className={classes.text}>{votingCount}</p>
                     </div>
                     <button className={classes.upvoteButton}
                             onClick={upvoteBtnHandler}>

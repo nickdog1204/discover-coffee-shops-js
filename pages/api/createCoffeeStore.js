@@ -1,26 +1,15 @@
-const Airtable = require('airtable');
-const base = new Airtable({apiKey: process.env.AIRTABLE_API_KEY})
-    .base(process.env.AIRTABLE_BASE_KEY);
-
-
-const table = base('coffee-stores');
+import {findRecordsByIdFilterAsync, table} from "../../lib/airtable";
 
 const createCoffeeStore = async (req, res) => {
     if (req.method === 'POST') {
-        console.log({'req.body': req.body});
-        const {id, name, address, voting, neighbourhood, imgUrl} = req.body;
+        const {id, name, address, voting, neighborhood, imgUrl} = req.body;
         try {
-            const records = await table
-                .select({
-                    filterByFormula: `id="${id}"`
-                })
-                .firstPage()
+
+            const records = await findRecordsByIdFilterAsync(id)
             res.status(200)
-            const transformedRecords = records.map(it => ({...it.fields}))
-            const foundRecord = transformedRecords.find(it => it.id === id);
-            if (foundRecord) {
-                console.log({foundRecord});
-                res.json({foundRecord});
+            if (records.length !== 0) {
+                // console.log({foundRecord});
+                res.json({type: 'found-ok', data: records});
             } else {
                 try {
                     const result = await table
@@ -30,13 +19,13 @@ const createCoffeeStore = async (req, res) => {
                                 name,
                                 address,
                                 voting,
-                                neighbourhood,
+                                neighborhood,
                                 imgUrl
                             }
                         }]);
                     res.status(200);
-                    console.log({result})
-                    res.json({result});
+                    // console.log({result})
+                    res.json({type: 'newlyCreated', data: result[0].fields});
                 } catch (e) {
                     res.status(400);
                     res.json({errorMsg: 'Cannot create a new record'});
